@@ -18,6 +18,7 @@ interface DragState {
   startY: number;
   nodeStartX: number;
   nodeStartY: number;
+  selectedNodesStartPositions: Record<string, { x: number; y: number }>;
   scale: number;
   hasStarted: boolean;
 }
@@ -150,8 +151,10 @@ export default function NodeEditor() {
         }
         
         if (dragRef.current.hasStarted) {
-          let newX = dragRef.current.nodeStartX + dx / dragRef.current.scale;
-          let newY = dragRef.current.nodeStartY + dy / dragRef.current.scale;
+          const deltaX = dx / dragRef.current.scale;
+          const deltaY = dy / dragRef.current.scale;
+          let newX = dragRef.current.nodeStartX + deltaX;
+          let newY = dragRef.current.nodeStartY + deltaY;
           
           // 吸附检测
           const SNAP_THRESHOLD = 12;
@@ -160,7 +163,7 @@ export default function NodeEditor() {
           
           if (draggedNode) {
             for (const other of allNodes) {
-              if (other.id === dragRef.current.nodeId) continue;
+              if (dragRef.current && Object.keys(dragRef.current.selectedNodesStartPositions).includes(other.id)) continue;
               
               const otherCenterX = other.x + NODE_WIDTH / 2;
               const otherCenterY = other.y + NODE_HEIGHT / 2;
@@ -210,7 +213,12 @@ export default function NodeEditor() {
             }
           }
           
-          moveNode(dragRef.current.nodeId, newX, newY);
+          const finalDeltaX = newX - dragRef.current.nodeStartX;
+          const finalDeltaY = newY - dragRef.current.nodeStartY;
+          
+          for (const [id, pos] of Object.entries(dragRef.current.selectedNodesStartPositions)) {
+            moveNode(id, pos.x + finalDeltaX, pos.y + finalDeltaY);
+          }
         }
       }
 
@@ -319,12 +327,25 @@ export default function NodeEditor() {
   useEffect(() => {
     const handleNodeMouseDown = (e: Event) => {
       const detail = (e as CustomEvent).detail;
+      const nodeIdsToMove = selectedNodeIds.includes(detail.nodeId) 
+        ? selectedNodeIds 
+        : [detail.nodeId];
+      
+      const startPositions: Record<string, { x: number; y: number }> = {};
+      for (const id of nodeIdsToMove) {
+        const node = nodes.find(n => n.id === id);
+        if (node) {
+          startPositions[id] = { x: node.x, y: node.y };
+        }
+      }
+      
       dragRef.current = {
         nodeId: detail.nodeId,
         startX: detail.clientX,
         startY: detail.clientY,
         nodeStartX: detail.nodeX,
         nodeStartY: detail.nodeY,
+        selectedNodesStartPositions: startPositions,
         scale: detail.scale,
         hasStarted: false
       };
