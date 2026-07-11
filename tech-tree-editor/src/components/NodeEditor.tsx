@@ -103,7 +103,10 @@ export default function NodeEditor() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeIds.length > 0) {
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeIds.length > 0 && !isInput) {
         e.preventDefault();
         selectedNodeIds.forEach(id => deleteNode(id));
       }
