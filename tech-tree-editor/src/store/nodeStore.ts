@@ -12,6 +12,7 @@ interface NodeStore {
   nodes: NodeData[];
   connections: Connection[];
   selectedNodeIds: string[];
+  selectedConnectionIds: string[];
   draggedNodeId: string | null;
   addingConnection: { fromNodeId: string; fromPortId: string } | null;
   connectionStyle: ConnectionStyle;
@@ -37,6 +38,8 @@ interface NodeStore {
   startConnection: (nodeId: string, portId: string) => void;
   endConnection: (nodeId: string, portId: string) => void;
   cancelConnection: () => void;
+  selectConnection: (id: string | null) => void;
+  selectConnections: (ids: string[]) => void;
   
   addPort: (nodeId: string, port: Omit<Port, 'id'>) => void;
   updatePort: (nodeId: string, portId: string, updates: Partial<Port>) => void;
@@ -114,6 +117,7 @@ export const useNodeStore = create<NodeStore>()(
     }
   ],
   selectedNodeIds: [],
+  selectedConnectionIds: [],
   draggedNodeId: null,
   addingConnection: null,
   connectionStyle: 'bezier',
@@ -264,6 +268,9 @@ export const useNodeStore = create<NodeStore>()(
   },
 
   cancelConnection: () => set({ addingConnection: null }),
+
+  selectConnection: (id) => set({ selectedConnectionIds: id ? [id] : [] }),
+  selectConnections: (ids) => set({ selectedConnectionIds: ids }),
 
   addPort: (nodeId, port) => set((state) => ({
     nodes: state.nodes.map(node =>

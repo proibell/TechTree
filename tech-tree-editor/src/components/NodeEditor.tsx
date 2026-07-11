@@ -18,7 +18,6 @@ interface DragState {
   startY: number;
   nodeStartX: number;
   nodeStartY: number;
-  selectedNodesStartPositions: Record<string, { x: number; y: number }>;
   scale: number;
   hasStarted: boolean;
 }
@@ -104,10 +103,7 @@ export default function NodeEditor() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-      
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeIds.length > 0 && !isInput) {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeIds.length > 0) {
         e.preventDefault();
         selectedNodeIds.forEach(id => deleteNode(id));
       }
@@ -151,10 +147,8 @@ export default function NodeEditor() {
         }
         
         if (dragRef.current.hasStarted) {
-          const deltaX = dx / dragRef.current.scale;
-          const deltaY = dy / dragRef.current.scale;
-          let newX = dragRef.current.nodeStartX + deltaX;
-          let newY = dragRef.current.nodeStartY + deltaY;
+          let newX = dragRef.current.nodeStartX + dx / dragRef.current.scale;
+          let newY = dragRef.current.nodeStartY + dy / dragRef.current.scale;
           
           // 吸附检测
           const SNAP_THRESHOLD = 12;
@@ -163,7 +157,7 @@ export default function NodeEditor() {
           
           if (draggedNode) {
             for (const other of allNodes) {
-              if (dragRef.current && Object.keys(dragRef.current.selectedNodesStartPositions).includes(other.id)) continue;
+              if (other.id === dragRef.current.nodeId) continue;
               
               const otherCenterX = other.x + NODE_WIDTH / 2;
               const otherCenterY = other.y + NODE_HEIGHT / 2;
@@ -213,12 +207,7 @@ export default function NodeEditor() {
             }
           }
           
-          const finalDeltaX = newX - dragRef.current.nodeStartX;
-          const finalDeltaY = newY - dragRef.current.nodeStartY;
-          
-          for (const [id, pos] of Object.entries(dragRef.current.selectedNodesStartPositions)) {
-            moveNode(id, pos.x + finalDeltaX, pos.y + finalDeltaY);
-          }
+          moveNode(dragRef.current.nodeId, newX, newY);
         }
       }
 
@@ -327,25 +316,12 @@ export default function NodeEditor() {
   useEffect(() => {
     const handleNodeMouseDown = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      const nodeIdsToMove = selectedNodeIds.includes(detail.nodeId) 
-        ? selectedNodeIds 
-        : [detail.nodeId];
-      
-      const startPositions: Record<string, { x: number; y: number }> = {};
-      for (const id of nodeIdsToMove) {
-        const node = nodes.find(n => n.id === id);
-        if (node) {
-          startPositions[id] = { x: node.x, y: node.y };
-        }
-      }
-      
       dragRef.current = {
         nodeId: detail.nodeId,
         startX: detail.clientX,
         startY: detail.clientY,
         nodeStartX: detail.nodeX,
         nodeStartY: detail.nodeY,
-        selectedNodesStartPositions: startPositions,
         scale: detail.scale,
         hasStarted: false
       };
